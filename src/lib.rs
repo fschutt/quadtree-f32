@@ -17,6 +17,13 @@ impl fmt::Display for Point {
     }
 }
 
+impl Point {
+    #[inline]
+    pub const fn new(x: f32, y: f32) -> Self {
+        Self { x, y }
+    }
+}
+
 /// Item that can be inserted into the QuadTree
 #[derive(Debug, Copy, Clone, PartialEq, PartialOrd)]
 pub enum Item {
