@@ -137,10 +137,21 @@ impl Rect {
 
     /// Returns whether the rect *overlaps* another rect
     pub fn overlaps_rect(&self, r: &Rect) -> bool {
-        r.contains_point(&Point { x: self.min_x, y: self.min_y }) ||
-        r.contains_point(&Point { x: self.max_x, y: self.min_y }) ||
-        r.contains_point(&Point { x: self.max_x, y: self.max_y }) ||
-        r.contains_point(&Point { x: self.max_x, y: self.min_x })
+
+        // test if self overlaps r
+        let min_y_in_range = r.min_y >= self.min_y && r.min_y <= self.max_y;
+        let max_y_in_range = r.max_y >= self.min_y && r.max_y <= self.max_y;
+        let min_x_in_range = r.min_x >= self.min_x && r.min_x <= self.max_x;
+        let max_x_in_range = r.max_x >= self.min_x && r.max_x <= self.max_x;
+
+        // test if r overlaps self
+        let self_min_y_in_range = self.min_y >= r.min_y && self.min_y <= r.max_y;
+        let self_max_y_in_range = self.max_y >= r.min_y && self.max_y <= r.max_y;
+        let self_min_x_in_range = self.min_x >= r.min_x && self.min_x <= r.max_x;
+        let self_max_x_in_range = self.max_x >= r.min_x && self.max_x <= r.max_x;
+
+        min_y_in_range || max_y_in_range || min_x_in_range || max_x_in_range ||
+        self_min_y_in_range || self_max_y_in_range || self_min_x_in_range || self_max_x_in_range
     }
 
     /// Unions two rectangles together
