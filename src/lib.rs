@@ -6,6 +6,7 @@
 
 use std::fmt;
 use std::collections::BTreeMap;
+use std::iter::Iterator;
 
 /// f32-based Point
 #[derive(Debug, Copy, Clone, PartialEq, PartialOrd)]
@@ -158,7 +159,7 @@ impl Rect {
 /// After insertion, you can query the IDs of items within
 /// a certain region.
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct ItemId(usize);
+pub struct ItemId(pub usize);
 
 /// A QuadTree that can store rectangles and points
 #[derive(Debug, Clone, PartialEq, PartialOrd)]
@@ -257,13 +258,13 @@ impl QuadTreeInternal {
 impl QuadTree {
 
     /// Constructs a new QuadTree with at most 10 items per box
-    pub fn new(items: &[Item]) -> Self {
+    pub fn new<I: Iterator<Item=(ItemId, Item)>>(items: I) -> Self {
         Self::new_with_max_items_per_quad(items, 10)
     }
 
     /// For performance, how many items should be in each quad before it gets subdivided?
-    pub fn new_with_max_items_per_quad(items: &[Item], max_items: usize) -> Self {
-        let items_with_id_and_bbox = items.iter().enumerate().map(|(id, i)| (*i, i.get_bbox(), ItemId(id))).collect::<Vec<_>>();
+    pub fn new_with_max_items_per_quad<I: Iterator<Item=(ItemId, Item)>>(items: I, max_items: usize) -> Self {
+        let items_with_id_and_bbox = items.into_iter().map(|(id, i)| (i, i.get_bbox(), id)).collect::<Vec<_>>();
         let all_items = items_with_id_and_bbox.iter().map(|(item, _bbox, id)| (*id, *item)).collect::<BTreeMap<_, _>>();
         let all_bboxes = items_with_id_and_bbox.into_iter().map(|(_item, bbox, id)| (bbox, id)).collect::<Vec<_>>();
         let sum_of_bboxes = all_bboxes.iter().fold(Rect::zero(), |f, a| f.union(&a.0));
