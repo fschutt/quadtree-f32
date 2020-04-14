@@ -192,6 +192,8 @@ enum Knot {
 }
 
 impl Knot {
+
+    // Warning: the returned ItemIds might be duplicated!
     fn query_items_overlap(&self, r: &Rect) -> Vec<ItemId> {
         match self {
             Knot::HasItems(i) => {
@@ -210,6 +212,7 @@ impl Knot {
         }
     }
 
+    // Warning: the returned ItemIds might be duplicated!
     fn query_items_contained_by(&self, r: &Rect) -> Vec<ItemId> {
         match self {
             Knot::HasItems(i) => {
@@ -238,10 +241,10 @@ impl QuadTreeInternal {
         } else {
             let [top_left, top_right, bottom_left, bottom_right] = total_bbox.quarter();
 
-            let top_left_rects = bboxes.iter().filter(|(r, _)| top_left.contains_rect(r)).copied().collect();
-            let top_right_rects = bboxes.iter().filter(|(r, _)| top_right.contains_rect(r)).copied().collect();
-            let bottom_left_rects = bboxes.iter().filter(|(r, _)| bottom_left.contains_rect(r)).copied().collect();
-            let bottom_right_rects = bboxes.iter().filter(|(r, _)| bottom_right.contains_rect(r)).copied().collect();
+            let top_left_rects = bboxes.iter().filter(|(r, _)| top_left.overlaps_rect(r)).copied().collect();
+            let top_right_rects = bboxes.iter().filter(|(r, _)| top_right.overlaps_rect(r)).copied().collect();
+            let bottom_left_rects = bboxes.iter().filter(|(r, _)| bottom_left.overlaps_rect(r)).copied().collect();
+            let bottom_right_rects = bboxes.iter().filter(|(r, _)| bottom_right.overlaps_rect(r)).copied().collect();
 
             Knot::HasChildren(Box::new([
                 QuadTreeInternal::new(top_left, top_left_rects, max_items),
@@ -292,12 +295,18 @@ impl QuadTree {
 
     /// Query the IDs of all items that *overlap* the rect
     pub fn get_ids_that_overlap(&self, rect: &Rect) -> Vec<ItemId> {
-        self.internal.query_items_overlap(rect)
+        let mut items = self.internal.query_items_overlap(rect);
+        items.sort();
+        items.dedup();
+        items
     }
 
     /// Query the IDs of all items *completely contained* by the rect
     pub fn get_ids_contained_by(&self, rect: &Rect) -> Vec<ItemId> {
-        self.internal.query_items_contained_by(rect)
+        let mut items = self.internal.query_items_contained_by(rect);
+        items.sort();
+        items.dedup();
+        items
     }
 
     /// Returns all points in the QuadTree that are within the bounds of `rect`
