@@ -71,30 +71,30 @@ impl Rect {
         [
             // top left
             Rect {
-                max_x: self.max_x,
-                min_x: middle_x,
+                max_x: middle_x,
                 max_y: self.max_y,
+                min_x: self.min_x,
                 min_y: middle_y,
             },
             // top right
             Rect {
-                max_x: middle_x,
-                min_x: self.min_x,
+                max_x: self.max_x,
                 max_y: self.max_y,
+                min_x: middle_x,
                 min_y: middle_y,
             },
             // bottom left
             Rect {
-                max_x: self.max_x,
-                min_x: middle_x,
+                max_x: middle_x,
                 max_y: middle_y,
+                min_x: self.min_x,
                 min_y: self.min_y,
             },
             // bottom right
             Rect {
-                max_x: middle_x,
-                min_x: self.min_x,
+                max_x: self.max_x,
                 max_y: middle_y,
+                min_x: middle_x,
                 min_y: self.min_y,
             },
         ]
@@ -137,21 +137,10 @@ impl Rect {
 
     /// Returns whether the rect *overlaps* another rect
     pub fn overlaps_rect(&self, r: &Rect) -> bool {
-
-        // test if self overlaps r
-        let min_y_in_range = r.min_y >= self.min_y && r.min_y <= self.max_y;
-        let max_y_in_range = r.max_y >= self.min_y && r.max_y <= self.max_y;
-        let min_x_in_range = r.min_x >= self.min_x && r.min_x <= self.max_x;
-        let max_x_in_range = r.max_x >= self.min_x && r.max_x <= self.max_x;
-
-        // test if r overlaps self
-        let self_min_y_in_range = self.min_y >= r.min_y && self.min_y <= r.max_y;
-        let self_max_y_in_range = self.max_y >= r.min_y && self.max_y <= r.max_y;
-        let self_min_x_in_range = self.min_x >= r.min_x && self.min_x <= r.max_x;
-        let self_max_x_in_range = self.max_x >= r.min_x && self.max_x <= r.max_x;
-
-        min_y_in_range || max_y_in_range || min_x_in_range || max_x_in_range ||
-        self_min_y_in_range || self_max_y_in_range || self_min_x_in_range || self_max_x_in_range
+        self.contains_point(&Point { x: r.max_x, y: r.max_y } /* top right corner */) ||
+        self.contains_point(&Point { x: r.min_x, y: r.max_y } /* top left corner */) ||
+        self.contains_point(&Point { x: r.min_x, y: r.min_y } /* bottom left corner */) ||
+        self.contains_point(&Point { x: r.min_x, y: r.max_y } /* bottom right corner */)
     }
 
     /// Unions two rectangles together
@@ -163,6 +152,24 @@ impl Rect {
             min_y: r.min_y.min(self.min_y),
         }
     }
+}
+
+#[test]
+fn test_overlap() {
+    let a = Rect {
+        max_x: 5.0,
+        max_y: 10.0,
+        min_x: 0.0,
+        min_y: 5.0,
+    };
+
+    let b = Rect {
+        max_x: 1.0,
+        max_y: 1.0,
+        min_x: 0.0,
+        min_y: 0.0,
+    };
+    assert_eq!(a.overlaps_rect(&b), false);
 }
 
 /// Instead of making a generic tree, the quadtree only
@@ -192,50 +199,52 @@ enum Knot {
 
 fn construct_quadtree(
     items: Vec<(Rect, ItemId)>,
-    bbox: Rect,
+    total_bbox: Rect,
     max_len: usize
 ) -> Vec<Knot> {
 
-    let mut items = vec![Knot::HasItems { bbox, items }];
+    let mut knot_items = vec![Knot::HasItems { bbox: total_bbox, items }];
 
     loop {
 
         let mut items_to_push = Vec::new();
-        let current_items_len = items.len();
+        let current_items_len = knot_items.len();
 
-        for knot in items.iter_mut() {
+        for knot in knot_items.iter_mut() {
             match knot.clone() {
-                Knot::HasItems { bbox, items } if items.len() > max_len => {
-                    // rect has too many items split it into 4 quarters and replace the original knot with
-                    let [top_left, top_right, bottom_left, bottom_right] = bbox.quarter();
+                Knot::HasItems { bbox, items } => {
+                    if items.len() > max_len {
+                        // rect has too many items split it into 4 quarters and replace the original knot with
+                        let [top_left, top_right, bottom_left, bottom_right] = bbox.quarter();
 
-                    let top_left_rects = items.iter().filter(|(r, _)| top_left.overlaps_rect(r)).copied().collect();
-                    let top_right_rects = items.iter().filter(|(r, _)| top_right.overlaps_rect(r)).copied().collect();
-                    let bottom_left_rects = items.iter().filter(|(r, _)| bottom_left.overlaps_rect(r)).copied().collect();
-                    let bottom_right_rects = items.iter().filter(|(r, _)| bottom_right.overlaps_rect(r)).copied().collect();
+                        let top_left_rects = items.iter().filter(|(r, _)| top_left.overlaps_rect(r)).copied().collect::<Vec<_>>();
+                        let top_right_rects = items.iter().filter(|(r, _)| top_right.overlaps_rect(r)).copied().collect::<Vec<_>>();
+                        let bottom_left_rects = items.iter().filter(|(r, _)| bottom_left.overlaps_rect(r)).copied().collect::<Vec<_>>();
+                        let bottom_right_rects = items.iter().filter(|(r, _)| bottom_right.overlaps_rect(r)).copied().collect::<Vec<_>>();
 
-                    let top_left_knot = Knot::HasItems { bbox: top_left, items: top_left_rects };
-                    let top_left_knot_id = current_items_len + items_to_push.len();
-                    items_to_push.push(top_left_knot);
+                        let top_left_knot = Knot::HasItems { bbox: top_left, items: top_left_rects };
+                        let top_left_knot_id = current_items_len + items_to_push.len();
+                        items_to_push.push(top_left_knot);
 
-                    let top_right_knot = Knot::HasItems { bbox: top_right, items: top_right_rects };
-                    let top_right_knot_id = current_items_len + items_to_push.len();
-                    items_to_push.push(top_right_knot);
+                        let top_right_knot = Knot::HasItems { bbox: top_right, items: top_right_rects };
+                        let top_right_knot_id = current_items_len + items_to_push.len();
+                        items_to_push.push(top_right_knot);
 
-                    let bottom_left_knot = Knot::HasItems { bbox: bottom_left, items: bottom_left_rects };
-                    let bottom_left_knot_id = current_items_len + items_to_push.len();
-                    items_to_push.push(bottom_left_knot);
+                        let bottom_left_knot = Knot::HasItems { bbox: bottom_left, items: bottom_left_rects };
+                        let bottom_left_knot_id = current_items_len + items_to_push.len();
+                        items_to_push.push(bottom_left_knot);
 
-                    let bottom_right_knot = Knot::HasItems { bbox: bottom_right, items: bottom_right_rects };
-                    let bottom_right_knot_id = current_items_len + items_to_push.len();
-                    items_to_push.push(bottom_right_knot);
+                        let bottom_right_knot = Knot::HasItems { bbox: bottom_right, items: bottom_right_rects };
+                        let bottom_right_knot_id = current_items_len + items_to_push.len();
+                        items_to_push.push(bottom_right_knot);
 
-                    *knot = Knot::HasChildren([
-                        (InternalId(top_left_knot_id), top_left),
-                        (InternalId(top_right_knot_id), top_right),
-                        (InternalId(bottom_left_knot_id), bottom_left),
-                        (InternalId(bottom_right_knot_id), bottom_right),
-                    ]);
+                        *knot = Knot::HasChildren([
+                            (InternalId(top_left_knot_id), top_left),
+                            (InternalId(top_right_knot_id), top_right),
+                            (InternalId(bottom_left_knot_id), bottom_left),
+                            (InternalId(bottom_right_knot_id), bottom_right),
+                        ]);
+                    }
                 },
                 _ => { },
             }
@@ -244,11 +253,11 @@ fn construct_quadtree(
         if items_to_push.is_empty() {
             break;
         } else {
-            items.append(&mut items_to_push);
+            knot_items.append(&mut items_to_push);
         }
     }
 
-    items
+    knot_items
 }
 
 #[inline]
