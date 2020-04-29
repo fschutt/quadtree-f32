@@ -172,101 +172,123 @@ impl Rect {
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct ItemId(pub usize);
 
+// ID for indexing into the quadtree.index
+#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+struct InternalId(usize);
+
 /// A QuadTree that can store rectangles and points
 #[derive(Debug, Clone, PartialEq, PartialOrd)]
 pub struct QuadTree {
     all_items: BTreeMap<ItemId, Item>,
-    internal: QuadTreeInternal,
-}
-
-#[derive(Debug, Clone, PartialEq, PartialOrd)]
-struct QuadTreeInternal {
     bbox: Rect,
-    knot: Knot,
+    knots: Vec<Knot>,
 }
 
 #[derive(Debug, Clone, PartialEq, PartialOrd)]
 enum Knot {
-    HasItems(Vec<(Rect, ItemId)>),
-    HasChildren(Box<[QuadTreeInternal;4]>),
+    HasItems { bbox: Rect, items: Vec<(Rect, ItemId)> },
+    HasChildren([(InternalId, Rect);4]),
 }
 
-impl Knot {
+fn construct_quadtree(
+    items: Vec<(Rect, ItemId)>,
+    bbox: Rect,
+    max_len: usize
+) -> Vec<Knot> {
 
-    // Warning: the returned ItemIds might be duplicated!
-    fn query_items_overlap(&self, r: &Rect) -> Vec<ItemId> {
-        match self {
-            Knot::HasItems(i) => {
-                i
-                .iter()
-                .filter_map(|(k, v)| if k.overlaps_rect(r) { Some(*v) } else { None })
-                .collect()
-            },
-            Knot::HasChildren(children) => {
-                children
-                    .iter()
-                    .filter(|quadrant| r.overlaps_rect(&quadrant.bbox))
-                    .flat_map(|q| q.query_items_overlap(&r).into_iter())
-                    .collect()
+    let mut items = vec![Knot::HasItems { bbox, items }];
+
+    loop {
+
+        let mut items_to_push = Vec::new();
+        let current_items_len = items.len();
+
+        for knot in items.iter_mut() {
+            match knot.clone() {
+                Knot::HasItems { bbox, items } if items.len() > max_len => {
+                    // rect has too many items split it into 4 quarters and replace the original knot with
+                    let [top_left, top_right, bottom_left, bottom_right] = bbox.quarter();
+
+                    let top_left_rects = items.iter().filter(|(r, _)| top_left.overlaps_rect(r)).copied().collect();
+                    let top_right_rects = items.iter().filter(|(r, _)| top_right.overlaps_rect(r)).copied().collect();
+                    let bottom_left_rects = items.iter().filter(|(r, _)| bottom_left.overlaps_rect(r)).copied().collect();
+                    let bottom_right_rects = items.iter().filter(|(r, _)| bottom_right.overlaps_rect(r)).copied().collect();
+
+                    let top_left_knot = Knot::HasItems { bbox: top_left, items: top_left_rects };
+                    let top_left_knot_id = current_items_len + items_to_push.len();
+                    items_to_push.push(top_left_knot);
+
+                    let top_right_knot = Knot::HasItems { bbox: top_right, items: top_right_rects };
+                    let top_right_knot_id = current_items_len + items_to_push.len();
+                    items_to_push.push(top_right_knot);
+
+                    let bottom_left_knot = Knot::HasItems { bbox: bottom_left, items: bottom_left_rects };
+                    let bottom_left_knot_id = current_items_len + items_to_push.len();
+                    items_to_push.push(bottom_left_knot);
+
+                    let bottom_right_knot = Knot::HasItems { bbox: bottom_right, items: bottom_right_rects };
+                    let bottom_right_knot_id = current_items_len + items_to_push.len();
+                    items_to_push.push(bottom_right_knot);
+
+                    *knot = Knot::HasChildren([
+                        (InternalId(top_left_knot_id), top_left),
+                        (InternalId(top_right_knot_id), top_right),
+                        (InternalId(bottom_left_knot_id), bottom_left),
+                        (InternalId(bottom_right_knot_id), bottom_right),
+                    ]);
+                },
+                _ => { },
             }
         }
-    }
 
-    // Warning: the returned ItemIds might be duplicated!
-    fn query_items_contained_by(&self, r: &Rect) -> Vec<ItemId> {
-        match self {
-            Knot::HasItems(i) => {
-                i
-                .iter()
-                .filter_map(|(k, v)| if r.contains_rect(k) { Some(*v) } else { None })
-                .collect()
-            },
-            Knot::HasChildren(children) => {
-                children
-                    .iter()
-                    .filter(|quadrant| r.overlaps_rect(&quadrant.bbox))
-                    .flat_map(|q| q.query_items_contained_by(&r).into_iter())
-                    .collect()
-            }
-        }
-    }
-}
-
-impl QuadTreeInternal {
-
-    fn new(total_bbox: Rect, bboxes: Vec<(Rect, ItemId)>, max_items: usize) -> Self {
-
-        let knot = if bboxes.len() <= max_items {
-            Knot::HasItems(bboxes)
+        if items_to_push.is_empty() {
+            break;
         } else {
-            let [top_left, top_right, bottom_left, bottom_right] = total_bbox.quarter();
-
-            let top_left_rects = bboxes.iter().filter(|(r, _)| top_left.overlaps_rect(r)).copied().collect();
-            let top_right_rects = bboxes.iter().filter(|(r, _)| top_right.overlaps_rect(r)).copied().collect();
-            let bottom_left_rects = bboxes.iter().filter(|(r, _)| bottom_left.overlaps_rect(r)).copied().collect();
-            let bottom_right_rects = bboxes.iter().filter(|(r, _)| bottom_right.overlaps_rect(r)).copied().collect();
-
-            Knot::HasChildren(Box::new([
-                QuadTreeInternal::new(top_left, top_left_rects, max_items),
-                QuadTreeInternal::new(top_right, top_right_rects, max_items),
-                QuadTreeInternal::new(bottom_left, bottom_left_rects, max_items),
-                QuadTreeInternal::new(bottom_right, bottom_right_rects, max_items),
-            ]))
-        };
-
-        Self {
-            bbox: total_bbox,
-            knot
+            items.append(&mut items_to_push);
         }
     }
 
-    fn query_items_overlap(&self, r: &Rect) -> Vec<ItemId> {
-        if !r.overlaps_rect(&self.bbox) { Vec::new() } else { self.knot.query_items_overlap(r) }
+    items
+}
+
+#[inline]
+fn get_ids<F: Fn(&Rect, &Rect) -> bool>(
+    tree: &QuadTree,
+    query_rect: &Rect,
+    query: F,
+) -> Vec<ItemId> {
+    let mut items_to_search = vec![InternalId(0)];
+    let mut result = Vec::new();
+
+    while !items_to_search.is_empty() {
+
+        let mut knots_to_resolve = Vec::new();
+
+        for id in items_to_search {
+            match &tree.knots[id.0] {
+                Knot::HasItems { bbox, items } => {
+                    if query(bbox, query_rect) {
+                        for (item_rect, item_id) in items.iter() {
+                            if query(item_rect, query_rect) { result.push(*item_id); }
+                        }
+                    }
+                },
+                Knot::HasChildren([(tl_id, tl_rect), (tr_id, tr_rect), (bl_id, bl_rect), (br_id, br_rect)]) => {
+                    if query(tl_rect, query_rect) { knots_to_resolve.push(*tl_id); }
+                    if query(tr_rect, query_rect) { knots_to_resolve.push(*tr_id); }
+                    if query(bl_rect, query_rect) { knots_to_resolve.push(*bl_id); }
+                    if query(br_rect, query_rect) { knots_to_resolve.push(*br_id); }
+                },
+            }
+        }
+
+        items_to_search = knots_to_resolve;
     }
 
-    fn query_items_contained_by(&self, r: &Rect) -> Vec<ItemId> {
-        if !r.overlaps_rect(&self.bbox) { Vec::new() } else { self.knot.query_items_contained_by(r) }
-    }
+    result.sort();
+    result.dedup();
+
+    result
 }
 
 impl QuadTree {
@@ -284,34 +306,29 @@ impl QuadTree {
         let sum_of_bboxes = all_bboxes.iter().fold(Rect::zero(), |f, a| f.union(&a.0));
         Self {
             all_items,
-            internal: QuadTreeInternal::new(sum_of_bboxes, all_bboxes, max_items),
+            bbox: sum_of_bboxes,
+            knots: construct_quadtree(all_bboxes, sum_of_bboxes, max_items),
         }
     }
 
     /// Returns the extent of all items
     pub fn bbox(&self) -> Rect {
-        self.internal.bbox
+        self.bbox
     }
 
     /// Query the IDs of all items that *overlap* the rect
     pub fn get_ids_that_overlap(&self, rect: &Rect) -> Vec<ItemId> {
-        let mut items = self.internal.query_items_overlap(rect);
-        items.sort();
-        items.dedup();
-        items
+        get_ids(self, rect, |a, b| a.overlaps_rect(b))
     }
 
     /// Query the IDs of all items *completely contained* by the rect
     pub fn get_ids_contained_by(&self, rect: &Rect) -> Vec<ItemId> {
-        let mut items = self.internal.query_items_contained_by(rect);
-        items.sort();
-        items.dedup();
-        items
+        get_ids(self, rect, |a, b| a.contains_rect(b))
     }
 
     /// Returns all points in the QuadTree that are within the bounds of `rect`
-    pub fn get_points_contained_in(&self, rect: &Rect) -> Vec<Point> {
-        self.internal.query_items_contained_by(rect)
+    pub fn get_points_contained_by(&self, rect: &Rect) -> Vec<Point> {
+        self.get_ids_contained_by(rect)
         .into_iter()
         .filter_map(|id| self.all_items.get(&id))
         .filter_map(|item| match item { Item::Point(p) => Some(*p), Item::Rect(_) => None })
@@ -320,7 +337,7 @@ impl QuadTree {
 
     /// Returns all rectangles in the QuadTree that *overlap* `rect`
     pub fn get_rects_that_overlap(&self, rect: &Rect) -> Vec<Rect> {
-        self.internal.query_items_overlap(rect)
+        self.get_ids_that_overlap(rect)
         .into_iter()
         .filter_map(|id| self.all_items.get(&id))
         .filter_map(|item| match item { Item::Point(_) => None, Item::Rect(r) => Some(*r) })
@@ -329,7 +346,7 @@ impl QuadTree {
 
     /// Returns all rectangles in the QuadTree that *are completely contained by* `rect`
     pub fn get_rects_contained_by(&self, rect: &Rect) -> Vec<Rect> {
-        self.internal.query_items_contained_by(rect)
+        self.get_ids_contained_by(rect)
         .into_iter()
         .filter_map(|id| self.all_items.get(&id))
         .filter_map(|item| match item { Item::Point(_) => None, Item::Rect(r) => Some(*r) })
