@@ -23,6 +23,13 @@ impl Point {
     pub const fn new(x: f32, y: f32) -> Self {
         Self { x, y }
     }
+
+    #[inline]
+    pub fn distance(&self, other: &Point) -> f32 {
+        let dx = other.x - self.x;
+        let dy = other.y - self.y;
+        dx.hypot(dy)
+    }
 }
 
 /// Item that can be inserted into the QuadTree
@@ -34,6 +41,7 @@ pub enum Item {
 
 impl Item {
     /// Returns the bounding box of the item (in the case of a point, min_x == max_x)
+    #[inline]
     pub fn get_bbox(&self) -> Rect {
         match self {
             Item::Rect(r) => *r,
@@ -43,6 +51,14 @@ impl Item {
                 min_y: p.y,
                 max_y: p.y,
             }
+        }
+    }
+
+    #[inline]
+    pub fn get_center(&self) -> Point {
+        match self {
+            Item::Rect(r) => r.get_center(),
+            Item::Point(p) => *p,
         }
     }
 }
@@ -122,6 +138,14 @@ impl Rect {
         self.max_y - self.min_y
     }
 
+    #[inline]
+    pub fn get_center(&self) -> Point {
+        Point {
+            x: (self.max_x + self.min_x) / 2.0,
+            y: (self.max_y + self.min_y) / 2.0
+        }
+    }
+
     /// Returns whether the rect contains a point
     #[inline]
     pub fn contains_point(&self, p: &Point) -> bool {
@@ -137,10 +161,10 @@ impl Rect {
 
     /// Returns whether the rect *overlaps* another rect
     pub fn overlaps_rect(&self, r: &Rect) -> bool {
-        self.contains_point(&Point { x: r.max_x, y: r.max_y } /* top right corner */) ||
-        self.contains_point(&Point { x: r.min_x, y: r.max_y } /* top left corner */) ||
-        self.contains_point(&Point { x: r.min_x, y: r.min_y } /* bottom left corner */) ||
-        self.contains_point(&Point { x: r.min_x, y: r.max_y } /* bottom right corner */)
+        !(r.min_x > self.max_x ||
+          r.max_x < self.min_x ||
+          r.min_y > self.max_y ||
+          r.max_y < self.min_y)
     }
 
     /// Unions two rectangles together
@@ -296,6 +320,14 @@ fn get_ids<F: Fn(&Rect, &Rect) -> bool>(
 
     result.sort();
     result.dedup();
+
+    // sort by distance from query rect to make the result predictable
+    let query_rect_center = query_rect.get_center();
+    result.sort_by(|a, b| {
+        let a_distance = tree.all_items[a].get_center().distance(&query_rect_center);
+        let b_distance = tree.all_items[b].get_center().distance(&query_rect_center);
+        a_distance.partial_cmp(&b_distance).unwrap_or(core::cmp::Ordering::Equal)
+    });
 
     result
 }
