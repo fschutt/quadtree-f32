@@ -227,6 +227,10 @@ fn construct_quadtree(
     max_len: usize
 ) -> Vec<Knot> {
 
+    // max_len = percentage
+    // max_len = 10 -> each knot can contain at maximum 10% of all points
+    let max_len = items.len() / max_len;
+
     let mut knot_items = vec![Knot::HasItems {
         bbox: total_bbox,
         items
@@ -278,10 +282,10 @@ fn construct_quadtree(
             }
         }
 
-        knot_items.append(&mut items_to_push);
-
         if items_to_push.is_empty() {
             break;
+        } else {
+            knot_items.append(&mut items_to_push);
         }
     }
 
@@ -338,9 +342,9 @@ fn get_ids<F: Fn(&Rect, &Rect) -> bool>(
 
 impl QuadTree {
 
-    /// Constructs a new QuadTree with at most 10 items per box
+    /// Constructs a new QuadTree with at most 1/20th of the items per box = each box contains at max 5% of the points
     pub fn new<I: Iterator<Item=(ItemId, Item)>>(items: I) -> Self {
-        Self::new_with_max_items_per_quad(items, 10)
+        Self::new_with_max_items_per_quad(items, 20)
     }
 
     /// For performance, how many items should be in each quad before it gets subdivided?
