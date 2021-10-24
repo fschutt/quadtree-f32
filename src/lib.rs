@@ -227,9 +227,12 @@ fn construct_quadtree(
     max_len: usize
 ) -> Vec<Knot> {
 
+    // 100 - 3% of points
+    let max_len = max_len.max(1).min(33);
+
     // max_len = percentage
     // max_len = 10 -> each knot can contain at maximum 10% of all points
-    let max_len = items.len() / max_len;
+    let max_len = ((items.len() as f32 / max_len as f32).ceil() as usize).max(20).min(items.len() + 1);
 
     let mut knot_items = vec![Knot::HasItems {
         bbox: total_bbox,
