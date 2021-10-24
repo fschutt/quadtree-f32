@@ -227,7 +227,10 @@ fn construct_quadtree(
     max_len: usize
 ) -> Vec<Knot> {
 
-    let mut knot_items = vec![Knot::HasItems { bbox: total_bbox, items }];
+    let mut knot_items = vec![Knot::HasItems {
+        bbox: total_bbox,
+        items
+    }];
 
     loop {
 
@@ -238,6 +241,7 @@ fn construct_quadtree(
             match knot.clone() {
                 Knot::HasItems { bbox, items } => {
                     if items.len() > max_len {
+
                         // rect has too many items split it into 4 quarters and replace the original knot with
                         let [top_left, top_right, bottom_left, bottom_right] = bbox.quarter();
 
@@ -274,10 +278,10 @@ fn construct_quadtree(
             }
         }
 
+        knot_items.append(&mut items_to_push);
+
         if items_to_push.is_empty() {
             break;
-        } else {
-            knot_items.append(&mut items_to_push);
         }
     }
 
