@@ -1,4 +1,4 @@
-//! Simple f32-based quadtree that can query rects and points
+//! Simple Float-based quadtree that can query rects and points
 //! in Olog(n) time.
 //!
 //! Note: For simplicity sake, there is no way to update the tree
@@ -8,9 +8,14 @@ use std::fmt;
 use std::collections::BTreeMap;
 use std::iter::Iterator;
 
+#[cfg(not(feature = "f64"))]
+pub type Float = f32;
+#[cfg(feature = "f64")]
+pub type Float = f64;
+
 /// f32-based Point
 #[derive(Debug, Copy, Clone, PartialEq, PartialOrd)]
-pub struct Point { pub x: f32, pub y: f32 }
+pub struct Point { pub x: Float, pub y: Float }
 
 impl fmt::Display for Point {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -20,12 +25,12 @@ impl fmt::Display for Point {
 
 impl Point {
     #[inline]
-    pub const fn new(x: f32, y: f32) -> Self {
+    pub const fn new(x: Float, y: Float) -> Self {
         Self { x, y }
     }
 
     #[inline]
-    pub fn distance(&self, other: &Point) -> f32 {
+    pub fn distance(&self, other: &Point) -> Float {
         let dx = other.x - self.x;
         let dy = other.y - self.y;
         dx.hypot(dy)
@@ -66,10 +71,10 @@ impl Item {
 /// Rectangle (2d bounding box) that can be inserted into the QuadTree
 #[derive(Debug, Copy, Clone, PartialEq, PartialOrd)]
 pub struct Rect {
-    pub max_x: f32,
-    pub max_y: f32,
-    pub min_x: f32,
-    pub min_y: f32,
+    pub max_x: Float,
+    pub max_y: Float,
+    pub min_x: Float,
+    pub min_y: Float,
 }
 
 impl fmt::Display for Rect {
@@ -128,13 +133,13 @@ impl Rect {
 
     /// Returns the height of the rectangle
     #[inline]
-    pub fn get_width(&self) -> f32 {
+    pub fn get_width(&self) -> Float {
         self.max_x - self.min_x
     }
 
     /// Returns the height of the rectangle
     #[inline]
-    pub fn get_height(&self) -> f32 {
+    pub fn get_height(&self) -> Float {
         self.max_y - self.min_y
     }
 
@@ -232,7 +237,7 @@ fn construct_quadtree(
 
     // max_len = percentage
     // max_len = 10 -> each knot can contain at maximum 10% of all points
-    let max_len = ((items.len() as f32 / max_len as f32).ceil() as usize).max(20).min(items.len() + 1);
+    let max_len = ((items.len() as Float / max_len as Float).ceil() as usize).max(20).min(items.len() + 1);
 
     let mut knot_items = vec![Knot::HasItems {
         bbox: total_bbox,
