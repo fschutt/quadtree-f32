@@ -1,6 +1,6 @@
-# quadtree-f32
+# QuadTree-f32
 
-A fast, dependency-free 2D spatial indexing quadtree implementation in Rust for efficient storage and querying of points and rectangles.
+A fast, dependency-free 2D spatial indexing QuadTree implementation in Rust for efficient storage and querying of points and rectangles.
 
 [![Crates.io](https://img.shields.io/crates/v/quadtree-f32.svg)](https://crates.io/crates/quadtree-f32)
 [![Documentation](https://docs.rs/quadtree-f32/badge.svg)](https://docs.rs/quadtree-f32)
@@ -31,11 +31,13 @@ quadtree-f32 = { version = "0.4.1", features = ["f64"] }
 ## Quick Start
 
 ```rust
-use quadtree_f32::{Quadtree, Rect, Point, Item, ItemId};
+use quadtree_f32::{QuadTree, Rect, Point, Item, ItemId};
 
-// Define the spatial bounds
-let bounds = Rect { min_x: 0.0, min_y: 0.0, max_x: 100.0, max_y: 100.0 };
-let mut quadtree = Quadtree::new(bounds);
+// Create a new QuadTree.
+let mut quadtree = QuadTree::new();
+// The QuadTree will automatically determine its bounds from the items inserted.
+// The first item will set the initial bounding box, which will expand as needed
+// when new items are added outside the current bounds.
 
 // Insert a point
 let point_id = ItemId(1);
@@ -57,8 +59,9 @@ println!("Found {} overlapping items", overlapping_ids.len());
 
 ### Construction
 ```rust
-let quadtree = Quadtree::new(bounding_rect);
+let quadtree = QuadTree::new();
 ```
+The bounding box of the QuadTree is managed automatically. It's initialized by the first item inserted and expands as necessary.
 
 ### Insertion & Removal
 ```rust
@@ -93,9 +96,14 @@ let all_ids = quadtree.get_all_ids();
 Perform density-based clustering on stored items:
 
 ```rust
+use quadtree_f32::{QuadTree, Item, ItemId, Point}; // Added Point to use
+
+let mut quadtree = QuadTree::new(); // Add this line
+
 // Add several nearby points
 for i in 0..10 {
     let id = ItemId(i);
+    // Ensure Point::new is used correctly if it was missing
     let point = Item::Point(Point::new(10.0 + i as f32 * 0.5, 10.0));
     quadtree.insert(id, point);
 }
@@ -134,7 +142,7 @@ This implementation is not thread-safe. For concurrent access, wrap in appropria
 
 ```rust
 use std::sync::{Arc, Mutex};
-let shared_tree = Arc::new(Mutex::new(quadtree));
+let shared_tree = Arc::new(Mutex::new(QuadTree::new())); // Example for a new tree
 ```
 
 ## License
