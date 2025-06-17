@@ -1281,13 +1281,13 @@ mod tests {
     #[test]
     fn test_issue2_endless_loop_rects() {
         let mut tree = QuadTree::new(); // Changed from QuadTree::new(Rect { ... })
-        // Drastically reduced num_items from a higher value (e.g., 21) to 1.
-        // The original test with many identical items caused stack overflows due to deep recursion
-        // during subdivision. This is a known sensitivity of the current implementation when
-        // handling a large number of co-located or identical items.
-        // Future improvements could include adding a maximum recursion depth or
-        // alternative subdivision strategies for such dense/identical scenarios.
-        // For now, this test verifies the basic insertion and query logic with the dynamic bbox.
+                                        // Drastically reduced num_items from a higher value (e.g., 21) to 1.
+                                        // The original test with many identical items caused stack overflows due to deep recursion
+                                        // during subdivision. This is a known sensitivity of the current implementation when
+                                        // handling a large number of co-located or identical items.
+                                        // Future improvements could include adding a maximum recursion depth or
+                                        // alternative subdivision strategies for such dense/identical scenarios.
+                                        // For now, this test verifies the basic insertion and query logic with the dynamic bbox.
         let num_items = 1; // Drastically reduced to prevent stack overflow
                            // Using identical small rects. The first insertion will set the bbox.
         let item_rect = Rect {
