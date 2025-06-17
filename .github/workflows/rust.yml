@@ -26,28 +26,30 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+      
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: ${{ matrix.rust }}
-    - name: Cache Cargo dependencies
-      uses: actions/cache@v4
-      with:
-        path: |
-          ~/.cargo/bin/
-          ~/.cargo/registry/index/
-          ~/.cargo/registry/cache/
-          ~/.cargo/git/db/
-          target/
-        key: cargo-cache-${{ runner.os }}-${{ matrix.rust }}-${{ matrix.feature_flag }}-${{ hashFiles('**/Cargo.lock') }}
-        restore-keys: |
-          cargo-cache-${{ runner.os }}-${{ matrix.rust }}-${{ matrix.feature_flag }}-
-
-    - name: Build (${{ matrix.feature_name }})
-      run: cargo build --verbose ${{ matrix.feature_flag }}
-
-    - name: Test (${{ matrix.feature_name }})
-      run: cargo test --verbose ${{ matrix.feature_flag }}
+          
+      - name: Cache Cargo dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: cargo-cache-${{ runner.os }}-${{ matrix.rust }}-${{ matrix.feature_flag }}-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            cargo-cache-${{ runner.os }}-${{ matrix.rust }}-${{ matrix.feature_flag }}-
+  
+      - name: Build (${{ matrix.feature_name }})
+        run: cargo build --verbose ${{ matrix.feature_flag }}
+  
+      - name: Test (${{ matrix.feature_name }})
+        run: cargo test --verbose ${{ matrix.feature_flag }}
 
   clippy:
     name: Clippy Lints
