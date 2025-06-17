@@ -1,4 +1,4 @@
-//! # Quadtree Crate
+//! # QuadTree Crate
 //!
 //! This crate provides a dynamic quadtree implementation in Rust designed for
 //! efficient 2D spatial indexing and querying. It supports storing points and rectangles
@@ -18,11 +18,11 @@
 //! ## Usage Example
 //!
 //! ```rust
-//! use quadtree_rs::{Quadtree, Rect, Point, Item, ItemId};
+//! use quadtree_rs::{QuadTree, Rect, Point, Item, ItemId};
 //!
 //! // Create a new quadtree with a specific bounding box
 //! let bounds = Rect { min_x: 0.0, min_y: 0.0, max_x: 100.0, max_y: 100.0 };
-//! let mut quadtree = Quadtree::new(bounds);
+//! let mut quadtree = QuadTree::new(bounds);
 //!
 //! // Create some items
 //! let item1_id = ItemId(1);
@@ -99,7 +99,7 @@ impl Point {
     }
 }
 
-/// Represents a geometric item that can be inserted into the `Quadtree`.
+/// Represents a geometric item that can be inserted into the `QuadTree`.
 ///
 /// Items can be either a single `Point` or an axis-aligned `Rect` (rectangle).
 #[derive(Debug, Copy, Clone, PartialEq, PartialOrd)]
@@ -275,7 +275,7 @@ fn test_overlap() {
 
 /// Instead of making a generic tree, the quadtree only
 /// keeps items (rects or points) and their associated IDs.
-/// A unique identifier for an item stored in the `Quadtree`.
+/// A unique identifier for an item stored in the `QuadTree`.
 ///
 /// Wraps a `usize` value. It is essential that these IDs are unique for
 /// operations like `get_item_by_id` and `remove` to function correctly.
@@ -290,10 +290,10 @@ enum PointStatus {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub enum QuadtreeNode {
+pub enum QuadTreeNode {
     Empty,
     Leaf { items: Vec<(ItemId, Item)>, bbox: Rect },
-    Internal { children: [(Box<QuadtreeNode>, Rect); 4], bbox: Rect },
+    Internal { children: [(Box<QuadTreeNode>, Rect); 4], bbox: Rect },
 }
 
 /// The main quadtree data structure.
@@ -302,16 +302,16 @@ pub enum QuadtreeNode {
 /// 2D bounding box. The tree dynamically subdivides its nodes as more items are
 /// inserted, allowing for efficient spatial queries.
 #[derive(Debug, Clone, PartialEq)]
-pub struct Quadtree {
-    root: QuadtreeNode,
+pub struct QuadTree {
+    root: QuadTreeNode,
     bbox: Rect,
 }
 
 /// Defines the maximum number of items a leaf node can hold before it subdivides.
 const MAX_ITEMS_PER_NODE: usize = 4;
 
-impl Quadtree {
-    /// Creates a new, empty `Quadtree` covering the specified `bounding_box`.
+impl QuadTree {
+    /// Creates a new, empty `QuadTree` covering the specified `bounding_box`.
     ///
     /// # Arguments
     /// * `bounding_box`: The `Rect` defining the total area covered by this quadtree.
@@ -321,13 +321,13 @@ impl Quadtree {
     ///
     /// # Examples
     /// ```
-    /// use quadtree_rs::{Quadtree, Rect};
+    /// use quadtree_rs::{QuadTree, Rect};
     /// let bounds = Rect { min_x: 0.0, min_y: 0.0, max_x: 100.0, max_y: 100.0 };
-    /// let quadtree = Quadtree::new(bounds);
+    /// let quadtree = QuadTree::new(bounds);
     /// ```
     pub fn new(bounding_box: Rect) -> Self {
-        Quadtree {
-            root: QuadtreeNode::Empty,
+        QuadTree {
+            root: QuadTreeNode::Empty,
             bbox: bounding_box,
         }
     }
@@ -344,9 +344,9 @@ impl Quadtree {
     ///
     /// # Examples
     /// ```
-    /// # use quadtree_rs::{Quadtree, Rect, Point, Item, ItemId};
+    /// # use quadtree_rs::{QuadTree, Rect, Point, Item, ItemId};
     /// # let bounds = Rect { min_x: 0.0, min_y: 0.0, max_x: 100.0, max_y: 100.0 };
-    /// # let mut quadtree = Quadtree::new(bounds);
+    /// # let mut quadtree = QuadTree::new(bounds);
     /// let point_id = ItemId(1);
     /// let point_item = Item::Point(Point::new(10.0, 20.0));
     /// quadtree.insert(point_id, point_item);
@@ -367,19 +367,19 @@ impl Quadtree {
     /// Internal helper to recursively insert an item into a node.
     ///
     /// # Arguments
-    /// * `node`: The current `QuadtreeNode` to insert into.
+    /// * `node`: The current `QuadTreeNode` to insert into.
     /// * `item_id`: The `ItemId` of the item.
     /// * `item`: The `Item` to insert.
     /// * `node_bbox`: The bounding box of the current `node`.
-    fn insert_into_node(node: &mut QuadtreeNode, item_id: ItemId, item: Item, node_bbox: &Rect) {
+    fn insert_into_node(node: &mut QuadTreeNode, item_id: ItemId, item: Item, node_bbox: &Rect) {
         match node {
-            QuadtreeNode::Empty => {
-                *node = QuadtreeNode::Leaf {
+            QuadTreeNode::Empty => {
+                *node = QuadTreeNode::Leaf {
                     items: vec![(item_id, item)],
                     bbox: *node_bbox,
                 };
             }
-            QuadtreeNode::Leaf { items, bbox } => {
+            QuadTreeNode::Leaf { items, bbox } => {
                 if items.len() < MAX_ITEMS_PER_NODE {
                     items.push((item_id, item));
                 } else {
@@ -388,7 +388,7 @@ impl Quadtree {
                     let current_leaf_bbox = *bbox; // bbox of the current leaf being subdivided
 
                     let new_children_with_bboxes = Self::subdivide_node(&current_leaf_bbox);
-                    *node = QuadtreeNode::Internal {
+                    *node = QuadTreeNode::Internal {
                         children: new_children_with_bboxes,
                         bbox: current_leaf_bbox,
                     };
@@ -400,7 +400,7 @@ impl Quadtree {
                     Self::insert_into_node(node, item_id, item, &current_leaf_bbox);
                 }
             }
-            QuadtreeNode::Internal { children, .. } => { // Overall bbox of internal node is not directly used here for child selection
+            QuadTreeNode::Internal { children, .. } => { // Overall bbox of internal node is not directly used here for child selection
                 let item_item_bbox = item.get_bbox();
                 for (child_node, child_bbox) in children.iter_mut() {
                     if child_bbox.overlaps_rect(&item_item_bbox) {
@@ -411,13 +411,13 @@ impl Quadtree {
         }
     }
 
-    fn subdivide_node(parent_bbox: &Rect) -> [(Box<QuadtreeNode>, Rect); 4] {
+    fn subdivide_node(parent_bbox: &Rect) -> [(Box<QuadTreeNode>, Rect); 4] {
         let sub_quadrant_bboxes = parent_bbox.quarter();
         [
-            (Box::new(QuadtreeNode::Empty), sub_quadrant_bboxes[0]),
-            (Box::new(QuadtreeNode::Empty), sub_quadrant_bboxes[1]),
-            (Box::new(QuadtreeNode::Empty), sub_quadrant_bboxes[2]),
-            (Box::new(QuadtreeNode::Empty), sub_quadrant_bboxes[3]),
+            (Box::new(QuadTreeNode::Empty), sub_quadrant_bboxes[0]),
+            (Box::new(QuadTreeNode::Empty), sub_quadrant_bboxes[1]),
+            (Box::new(QuadTreeNode::Empty), sub_quadrant_bboxes[2]),
+            (Box::new(QuadTreeNode::Empty), sub_quadrant_bboxes[3]),
         ]
     }
 
@@ -432,9 +432,9 @@ impl Quadtree {
     ///
     /// # Examples
     /// ```
-    /// # use quadtree_rs::{Quadtree, Rect, Point, Item, ItemId};
+    /// # use quadtree_rs::{QuadTree, Rect, Point, Item, ItemId};
     /// # let bounds = Rect { min_x: 0.0, min_y: 0.0, max_x: 100.0, max_y: 100.0 };
-    /// # let mut quadtree = Quadtree::new(bounds);
+    /// # let mut quadtree = QuadTree::new(bounds);
     /// # quadtree.insert(ItemId(1), Item::Point(Point::new(10.0, 10.0)));
     /// let overlaps = quadtree.get_ids_that_overlap(&Rect { min_x: 5.0, min_y: 5.0, max_x: 15.0, max_y: 15.0 });
     /// assert!(overlaps.contains(&ItemId(1)));
@@ -449,10 +449,10 @@ impl Quadtree {
     }
 
     /// Internal helper to recursively find item IDs overlapping a query rectangle in a node.
-    fn query_node_for_ids(node: &QuadtreeNode, query_rect: &Rect, results: &mut Vec<ItemId>) {
+    fn query_node_for_ids(node: &QuadTreeNode, query_rect: &Rect, results: &mut Vec<ItemId>) {
         match node {
-            QuadtreeNode::Empty => {}
-            QuadtreeNode::Leaf { items, bbox } => {
+            QuadTreeNode::Empty => {}
+            QuadTreeNode::Leaf { items, bbox } => {
                 if !bbox.overlaps_rect(query_rect) { return; }
                 for (id, item_obj) in items {
                     if item_obj.get_bbox().overlaps_rect(query_rect) {
@@ -460,7 +460,7 @@ impl Quadtree {
                     }
                 }
             }
-            QuadtreeNode::Internal { children, bbox } => {
+            QuadTreeNode::Internal { children, bbox } => {
                 if !bbox.overlaps_rect(query_rect) { return; }
                 for (child_node, child_bbox) in children.iter() {
                     if child_bbox.overlaps_rect(query_rect) {
@@ -489,9 +489,9 @@ impl Quadtree {
     ///
     /// # Examples
     /// ```
-    /// # use quadtree_rs::{Quadtree, Rect, Point, Item, ItemId};
+    /// # use quadtree_rs::{QuadTree, Rect, Point, Item, ItemId};
     /// # let bounds = Rect { min_x: 0.0, min_y: 0.0, max_x: 100.0, max_y: 100.0 };
-    /// # let mut quadtree = Quadtree::new(bounds);
+    /// # let mut quadtree = QuadTree::new(bounds);
     /// let item_id = ItemId(1);
     /// let item = Item::Point(Point::new(10.0, 10.0));
     /// quadtree.insert(item_id, item);
@@ -504,13 +504,13 @@ impl Quadtree {
 
     /// Internal helper to recursively remove an item from a node.
     fn remove_from_node(
-        node: &mut QuadtreeNode,
+        node: &mut QuadTreeNode,
         item_id_to_remove: ItemId,
         item_bbox_to_remove: &Rect,
     ) -> bool {
         match node {
-            QuadtreeNode::Empty => false,
-            QuadtreeNode::Leaf { items, bbox } => {
+            QuadTreeNode::Empty => false,
+            QuadTreeNode::Leaf { items, bbox } => {
                 if !item_bbox_to_remove.overlaps_rect(bbox) { return false; }
                 let initial_len = items.len();
                 items.retain(|(id, _)| *id != item_id_to_remove);
@@ -518,7 +518,7 @@ impl Quadtree {
                 // Parent Internal node handles merging if this leaf becomes empty.
                 item_was_removed
             }
-            QuadtreeNode::Internal { children, bbox } => {
+            QuadTreeNode::Internal { children, bbox } => {
                 if !item_bbox_to_remove.overlaps_rect(bbox) { return false; }
 
                 let mut any_child_modified = false;
@@ -535,8 +535,8 @@ impl Quadtree {
                     let mut can_merge = true;
                     for (child_node, _) in children.iter() {
                         match child_node.as_ref() {
-                            QuadtreeNode::Empty => {}
-                            QuadtreeNode::Leaf { items: child_items, .. } => {
+                            QuadTreeNode::Empty => {}
+                            QuadTreeNode::Leaf { items: child_items, .. } => {
                                 if collected_items.len() + child_items.len() <= MAX_ITEMS_PER_NODE {
                                     collected_items.extend_from_slice(child_items);
                                 } else {
@@ -544,7 +544,7 @@ impl Quadtree {
                                     break;
                                 }
                             }
-                            QuadtreeNode::Internal { .. } => {
+                            QuadTreeNode::Internal { .. } => {
                                 can_merge = false;
                                 break;
                             }
@@ -553,9 +553,9 @@ impl Quadtree {
 
                     if can_merge {
                         *node = if collected_items.is_empty() {
-                            QuadtreeNode::Empty
+                            QuadTreeNode::Empty
                         } else {
-                            QuadtreeNode::Leaf { items: collected_items, bbox: *bbox }
+                            QuadTreeNode::Leaf { items: collected_items, bbox: *bbox }
                         };
                     }
                     true
@@ -582,13 +582,13 @@ impl Quadtree {
     }
 
     /// Internal helper to recursively find an item by ID in a node.
-    fn find_item_in_node(node: &QuadtreeNode, item_id_to_find: ItemId) -> Option<Item> {
+    fn find_item_in_node(node: &QuadTreeNode, item_id_to_find: ItemId) -> Option<Item> {
         match node {
-            QuadtreeNode::Empty => None,
-            QuadtreeNode::Leaf { items, .. } => {
+            QuadTreeNode::Empty => None,
+            QuadTreeNode::Leaf { items, .. } => {
                 items.iter().find(|(id, _)| *id == item_id_to_find).map(|(_, item)| *item)
             }
-            QuadtreeNode::Internal { children, .. } => {
+            QuadTreeNode::Internal { children, .. } => {
                 for (child_node, _) in children.iter() {
                     if let Some(item) = Self::find_item_in_node(child_node, item_id_to_find) {
                         return Some(item);
@@ -654,15 +654,15 @@ impl Quadtree {
     }
 
     /// Internal helper to recursively collect all items from a node.
-    fn get_all_items_from_node(node: &QuadtreeNode, all_items: &mut Vec<Item>) {
+    fn get_all_items_from_node(node: &QuadTreeNode, all_items: &mut Vec<Item>) {
         match node {
-            QuadtreeNode::Empty => {}
-            QuadtreeNode::Leaf { items, .. } => {
+            QuadTreeNode::Empty => {}
+            QuadTreeNode::Leaf { items, .. } => {
                 for (_, item_obj) in items {
                     all_items.push(*item_obj);
                 }
             }
-            QuadtreeNode::Internal { children, .. } => {
+            QuadTreeNode::Internal { children, .. } => {
                 for (child_node, _) in children.iter() {
                     Self::get_all_items_from_node(child_node, all_items);
                 }
@@ -685,15 +685,15 @@ impl Quadtree {
     }
 
     /// Internal helper to recursively collect all item IDs from a node.
-    fn get_all_ids_from_node(node: &QuadtreeNode, all_ids: &mut Vec<ItemId>) {
+    fn get_all_ids_from_node(node: &QuadTreeNode, all_ids: &mut Vec<ItemId>) {
         match node {
-            QuadtreeNode::Empty => {}
-            QuadtreeNode::Leaf { items, .. } => {
+            QuadTreeNode::Empty => {}
+            QuadTreeNode::Leaf { items, .. } => {
                 for (id, _) in items {
                     all_ids.push(*id);
                 }
             }
-            QuadtreeNode::Internal { children, .. } => {
+            QuadTreeNode::Internal { children, .. } => {
                 for (child_node, _) in children.iter() {
                     Self::get_all_ids_from_node(child_node, all_ids);
                 }
@@ -703,7 +703,7 @@ impl Quadtree {
 
     /// Returns the main bounding box of the quadtree.
     ///
-    /// This is the `Rect` that was provided when the quadtree was created with `Quadtree::new()`.
+    /// This is the `Rect` that was provided when the quadtree was created with `QuadTree::new()`.
     pub fn bbox(&self) -> Rect {
         self.bbox
     }
@@ -750,9 +750,9 @@ impl Quadtree {
     ///
     /// # Examples
     /// ```
-    /// # use quadtree_rs::{Quadtree, Rect, Point, Item, ItemId};
+    /// # use quadtree_rs::{QuadTree, Rect, Point, Item, ItemId};
     /// # let bounds = Rect { min_x: 0.0, min_y: 0.0, max_x: 100.0, max_y: 100.0 };
-    /// # let mut quadtree = Quadtree::new(bounds);
+    /// # let mut quadtree = QuadTree::new(bounds);
     /// // Insert some points
     /// quadtree.insert(ItemId(0), Item::Point(Point::new(10.0, 10.0)));
     /// quadtree.insert(ItemId(1), Item::Point(Point::new(11.0, 11.0)));
@@ -889,8 +889,8 @@ mod tests {
     use std::collections::HashSet; // For comparing item lists ignoring order
 
     // Helper to create a basic quadtree for tests
-    fn create_test_tree(min_x: Float, min_y: Float, max_x: Float, max_y: Float) -> Quadtree {
-        Quadtree::new(Rect { min_x, min_y, max_x, max_y })
+    fn create_test_tree(min_x: Float, min_y: Float, max_x: Float, max_y: Float) -> QuadTree {
+        QuadTree::new(Rect { min_x, min_y, max_x, max_y })
     }
 
     // Helper to assert that two vectors of ItemId contain the same elements, ignoring order.
@@ -908,7 +908,7 @@ mod tests {
         let tree = create_test_tree(0.0, 0.0, 100.0, 100.0);
         assert_eq!(tree.bbox(), Rect { min_x: 0.0, min_y: 0.0, max_x: 100.0, max_y: 100.0 });
         match tree.root {
-            QuadtreeNode::Empty => assert!(true),
+            QuadTreeNode::Empty => assert!(true),
             _ => panic!("Root should be Empty on new tree. Got: {:?}", tree.root),
         }
     }
@@ -916,7 +916,7 @@ mod tests {
     #[test]
     fn test_bbox_method() {
         let bounds = Rect { min_x: -10.0, min_y: -20.0, max_x: 30.0, max_y: 40.0 };
-        let tree = Quadtree::new(bounds);
+        let tree = QuadTree::new(bounds);
         assert_eq!(tree.bbox(), bounds);
     }
 
@@ -943,7 +943,7 @@ mod tests {
             tree.insert(item_id, Item::Point(Point::new(1.0, 1.0)));
         }
         match tree.root {
-            QuadtreeNode::Internal {..} => assert!(true),
+            QuadTreeNode::Internal {..} => assert!(true),
             _ => panic!("Root should be Internal after subdivision. Got: {:?}", tree.root),
         }
         assert_eq!(tree.get_all_items().len(), MAX_ITEMS_PER_NODE + 1);
@@ -1010,8 +1010,8 @@ mod tests {
         assert_eq!(tree.get_all_items().len(), 0, "Tree should be empty of items");
 
         match &tree.root {
-            QuadtreeNode::Empty => {} // Expected after merge of empty leaf
-            QuadtreeNode::Leaf{items, ..} if items.is_empty() => {} // Also acceptable
+            QuadTreeNode::Empty => {} // Expected after merge of empty leaf
+            QuadTreeNode::Leaf{items, ..} if items.is_empty() => {} // Also acceptable
             _ => panic!("Root is not Empty or an empty Leaf. Root: {:?}", tree.root),
         }
     }
@@ -1026,14 +1026,14 @@ mod tests {
             tree.insert(ItemId(i), item);
         }
 
-        match &tree.root { QuadtreeNode::Internal {..} => {}, _ => panic!("Should be internal") }
+        match &tree.root { QuadTreeNode::Internal {..} => {}, _ => panic!("Should be internal") }
 
         let (id_to_remove, item_to_remove) = items_data.remove(0);
         assert!(tree.remove(id_to_remove, item_to_remove));
 
         assert_eq!(tree.get_all_items().len(), MAX_ITEMS_PER_NODE);
         match &tree.root {
-            QuadtreeNode::Leaf {items, ..} => assert_eq!(items.len(), MAX_ITEMS_PER_NODE),
+            QuadTreeNode::Leaf {items, ..} => assert_eq!(items.len(), MAX_ITEMS_PER_NODE),
             _ => panic!("Tree should have merged to a Leaf. Root: {:?}", tree.root),
         }
     }
@@ -1041,7 +1041,7 @@ mod tests {
     // 5. Issue #2 - Endless Loop Test
     #[test]
     fn test_issue2_endless_loop_rects() {
-        let mut tree = Quadtree::new(Rect { min_x: -100.0, min_y: -100.0, max_x: 100.0, max_y: 100.0 });
+        let mut tree = QuadTree::new(Rect { min_x: -100.0, min_y: -100.0, max_x: 100.0, max_y: 100.0 });
         let num_items = 21;
         let item_rect = Rect { min_x: -1.0, min_y: -1.0, max_x: 1.0, max_y: 1.0 };
         let mut expected_ids = Vec::new();
