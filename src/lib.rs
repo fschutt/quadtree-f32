@@ -282,48 +282,6 @@ fn test_overlap() {
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct ItemId(pub usize);
 
-// ID for indexing into the quadtree.index
-// #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-// struct InternalId(usize); // Commented out as it's part of the old implementation
-
-// /// A QuadTree that can store rectangles and points (Old implementation)
-// #[derive(Debug, Clone, PartialEq, PartialOrd)]
-// pub struct QuadTree {
-//     all_items: BTreeMap<ItemId, Item>,
-//     bbox: Rect,
-//     knots: Vec<Knot>,
-// }
-
-// #[derive(Debug, Clone, PartialEq, PartialOrd)]
-// enum Knot {
-//     HasItems { bbox: Rect, items: Vec<(Rect, ItemId)> },
-//     HasChildren([(InternalId, Rect);4]),
-// }
-
-// fn construct_quadtree(
-//     items: Vec<(Rect, ItemId)>,
-//     total_bbox: Rect,
-//     max_len: usize
-// ) -> Vec<Knot> {
-//     // ... (implementation commented out)
-// }
-
-// #[inline]
-// fn get_ids<F: Fn(&Rect, &Rect) -> bool>(
-//     tree: &QuadTree,
-//     query_rect: &Rect,
-//     query: F,
-// ) -> Vec<ItemId> {
-//     // ... (implementation commented out)
-// }
-
-// impl QuadTree {
-//     // ... (all methods of the old QuadTree implementation commented out)
-// }
-
-
-// New Quadtree Implementation
-
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 enum PointStatus {
     Unvisited,
