@@ -25,15 +25,13 @@ jobs:
             rust: stable
 
     steps:
-    - uses: actions/checkout@v3
-
-    - name: Install Rust toolchain (${{ matrix.rust }})
-      uses: actions/setup-rust@v1
-      with:
-        rust-version: ${{ matrix.rust }}
-
+      - uses: actions/checkout@v4
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: ${{ matrix.rust }}
     - name: Cache Cargo dependencies
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       with:
         path: |
           ~/.cargo/bin/
@@ -55,14 +53,11 @@ jobs:
     name: Clippy Lints
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - name: Install Rust toolchain (stable)
-        uses: actions/setup-rust@v1
-        with:
-          rust-version: stable
-          components: clippy
+      - uses: actions/checkout@v4
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
       - name: Cache Cargo dependencies
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: |
             ~/.cargo/bin/
