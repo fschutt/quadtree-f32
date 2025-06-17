@@ -1,0 +1,90 @@
+name: Rust CI
+
+on:
+  push:
+    branches: [ "main", "master" ]
+  pull_request:
+    branches: [ "main", "master" ]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        rust: [stable]
+        # feature_flag and feature_name will be used to construct build/test commands and names
+        include:
+          - feature_flag: ''
+            feature_name: 'f32 (default)'
+            rust: stable
+          - feature_flag: '--features f64'
+            feature_name: 'f64'
+            rust: stable
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Install Rust toolchain (${{ matrix.rust }})
+      uses: actions/setup-rust@v1
+      with:
+        rust-version: ${{ matrix.rust }}
+
+    - name: Cache Cargo dependencies
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/.cargo/bin/
+          ~/.cargo/registry/index/
+          ~/.cargo/registry/cache/
+          ~/.cargo/git/db/
+          target/
+        key: cargo-cache-${{ runner.os }}-${{ matrix.rust }}-${{ matrix.feature_flag }}-${{ hashFiles('**/Cargo.lock') }}
+        restore-keys: |
+          cargo-cache-${{ runner.os }}-${{ matrix.rust }}-${{ matrix.feature_flag }}-
+
+    - name: Build (${{ matrix.feature_name }})
+      run: cargo build --verbose ${{ matrix.feature_flag }}
+
+    - name: Test (${{ matrix.feature_name }})
+      run: cargo test --verbose ${{ matrix.feature_flag }}
+
+  clippy:
+    name: Clippy Lints
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Install Rust toolchain (stable)
+        uses: actions/setup-rust@v1
+        with:
+          rust-version: stable
+          components: clippy
+      - name: Cache Cargo dependencies
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: clippy-cache-${{ runner.os }}-stable-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            clippy-cache-${{ runner.os }}-stable-
+      - name: Run Clippy
+        run: cargo clippy --all-targets --all-features -- -D warnings
+
+  fmt:
+    name: Rustfmt Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Install Rust toolchain (stable)
+        uses: actions/setup-rust@v1
+        with:
+          rust-version: stable
+          components: rustfmt
+      - name: Run rustfmt
+        run: cargo fmt -- --check
