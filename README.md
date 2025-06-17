@@ -1,4 +1,4 @@
-# QuadTree-f32
+# quadtree-f32
 
 A fast, dependency-free 2D spatial indexing QuadTree implementation in Rust for efficient storage and querying of points and rectangles.
 
@@ -35,6 +35,7 @@ use quadtree_f32::{QuadTree, Rect, Point, Item, ItemId};
 
 // Create a new QuadTree.
 let mut quadtree = QuadTree::new();
+
 // The QuadTree will automatically determine its bounds from the items inserted.
 // The first item will set the initial bounding box, which will expand as needed
 // when new items are added outside the current bounds.
@@ -58,18 +59,22 @@ println!("Found {} overlapping items", overlapping_ids.len());
 ## Core API
 
 ### Construction
+
 ```rust
 let quadtree = QuadTree::new();
 ```
+
 The bounding box of the QuadTree is managed automatically. It's initialized by the first item inserted and expands as necessary.
 
 ### Insertion & Removal
+
 ```rust
 quadtree.insert(item_id, item);
 let removed = quadtree.remove(item_id, item);
 ```
 
 ### Spatial Queries
+
 ```rust
 // Find all items overlapping a region
 let ids = quadtree.get_ids_that_overlap(&query_rect);
@@ -82,6 +87,7 @@ let rects = quadtree.get_rects_that_overlap(&query_rect);
 ```
 
 ### Item Retrieval
+
 ```rust
 // Get specific item by ID
 let item = quadtree.get_item_by_id(item_id);
@@ -123,7 +129,8 @@ for (i, cluster) in clusters.iter().enumerate() {
 - **Spatial Queries**: O(log n + k) where k is the number of results
 - **Tree Rebalancing**: Automatic merging when nodes become sparse
 
-The quadtree automatically subdivides when leaf nodes exceed the maximum capacity (4 items) and merges nodes when they become sufficiently sparse after removals.
+The quadtree automatically subdivides when leaf nodes exceed the maximum capacity (4 items) 
+and merges nodes when they become sufficiently sparse after removals.
 
 ## Coordinate System
 
@@ -134,16 +141,8 @@ The quadtree uses a standard 2D coordinate system where:
 
 ## Memory Management
 
-The implementation uses `Box<QuadtreeNode>` for tree nodes and `Vec` for item storage, providing efficient memory usage that grows and shrinks with the data.
-
-## Thread Safety
-
-This implementation is not thread-safe. For concurrent access, wrap in appropriate synchronization primitives:
-
-```rust
-use std::sync::{Arc, Mutex};
-let shared_tree = Arc::new(Mutex::new(QuadTree::new())); // Example for a new tree
-```
+The implementation uses `Box<QuadtreeNode>` for tree nodes and `Vec` for item storage, 
+providing efficient memory usage that grows and shrinks with the data.
 
 ## License
 
